@@ -1,0 +1,8 @@
+---
+
+- name: "Run tasks from {{ role_operation + '.yml' }}"
+  ansible.builtin.include_tasks:
+    file: "{{ role_operation }}.yml"
+  when:
+    - role_operation in role_operations
+  tags: always

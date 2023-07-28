@@ -1,0 +1,5 @@
+---
+
+role_operations:
+  - caddy_container
+  - caddy_reverse_proxy
