@@ -1,0 +1,38 @@
+---
+
+# - name: Install python-passlib+bcrypt (caddy pw default) if required
+#   ansible.builtin.package:
+#     name: python-passlib+bcrypt
+#   when: caddy_basicauth_user is defined and caddy_basicauth_user is truthy
+
+- name: Podman generate systemd become block
+  become: "{{ podman_rootless | d(true) | bool }}"
+  become_user: "{{ podman_user if podman_rootless | d(true) | bool else omit }}"
+  block:
+    - name: Remove reverse proxy configuration for {{ caddy_target_uri }}
+      ansible.builtin.file:
+        path: "{{ _caddy_config_dir }}/{{ caddy_target_uri }}.caddy"
+        state: absent
+      when:
+        - caddy_proxy_state | d('present') == 'absent'
+
+    - name: Caddy setup proxy for sever {{ caddy_reverse_proxy_src }}
+      ansible.builtin.template:
+        src: "Caddyfile_target_config.j2"
+        dest: "{{ _caddy_config_dir }}/{{ caddy_target_uri }}.caddy"
+        mode: "0o0644"
+        seuser: "unconfined_u"
+        setype: "container_file_t"
+        lstrip_blocks: true
+      # notify:
+      #   - Reload Caddyserver
+      register: _template
+      when:
+        - caddy_proxy_state | d('present') == 'present'
+
+    - name: Reload configuration # noqa: no-handler
+      ansible.builtin.command: podman exec -w /config caddy caddy reload
+      register: _result
+      changed_when: _result.rc != 0
+      when:
+        - _template.changed | bool

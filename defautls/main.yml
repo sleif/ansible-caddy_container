@@ -1,3 +1,7 @@
 ---
 
-container_storage_base_dir: /srv
+container_name: "caddy"
+podman_network_name: "podman"
+podman_rootless: true
+caddy_proxy_config_lines: []
+caddy_acme_staging: false

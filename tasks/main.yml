@@ -1,8 +1,30 @@
 ---
 
-- name: "Run tasks from {{ role_operation + '.yml' }}"
+# next task returns:
+# - _container_storage_dir_base_local
+# - _container_storage_dir_base
+# - _group, _owner
+# - _systemd_scope
+# - _systemd_service_files_dir
+# - _xdg_runtime_dir
+- name: Include podman_init_vars.yml from sleif.podman
+  ansible.builtin.include_tasks: "{{ lookup('first_found', params) }}"
+  vars:
+    params:
+      files: sleif.podman/tasks/includes/podman_init_vars.yml
+      paths: "{{ lookup('config', 'DEFAULT_ROLES_PATH') }}"
+
+- name: Set additional facts
+  ansible.builtin.set_fact:
+    _caddy_config_dir: "{{ _container_storage_dir_base }}/caddy/config"
+    _caddy_data_dir: "{{ _container_storage_dir_base }}/caddy/data"
+
+- name: Run tasks from {{ caddy_operation + '.yml' }}
   ansible.builtin.include_tasks:
-    file: "{{ role_operation }}.yml"
+    file: "{{ caddy_operation }}.yml"
+    apply:
+      tags:
+        - "{{ caddy_operation }}"
   when:
-    - role_operation in role_operations
+    - caddy_operation in caddy_operations
   tags: always

@@ -1,0 +1,64 @@
+# General Caddyfile
+{
+    # https://letsencrypt.org/docs/acme-protocol-updates/#api-endpoints
+    {% if caddy_acme_staging | d(false) | bool %}
+    acme_ca {{ caddy_acme_ca_api_staging }}
+    {% else %}
+    acme_ca {{ caddy_acme_ca_api }}
+    {% endif %}
+    admin 127.0.0.1:2019
+    # admin off
+	email {{ letsencrypt_email }}
+	http_port 80
+	https_port 443
+	log default {
+		output stderr
+		format json
+		level {{ caddy_loglevel | d('info') }}
+	}
+	servers {
+		metrics
+	}
+}
+
+(accesslog) {
+	log {
+		output stderr
+		format filter {
+			wrap json {
+				time_format wall_milli
+				time_local
+			}
+			fields {
+				request>remote_ip ip_mask {
+					ipv4 24
+					ipv6 56
+				}
+			}
+		}
+		level {{ caddy_loglevel | d('info') }}
+	}
+}
+
+{# (errorhandling) {
+	handle_errors {
+		rewrite * /{err.status_code}
+		reverse_proxy https://http.cat {
+			header_up Host {upstream_hostport}
+			replace_status {err.status_code}
+		}
+	}
+} #}
+
+{# (wellknown) {
+	handle_path /.well-known/* {
+		root * /srv/well-known
+		file_server
+	}
+}
+
+:443 {
+	tls {{ CADDY_CERT }} {{ CADDY_CERT_KEY }}
+} #}
+
+import /config/*.caddy

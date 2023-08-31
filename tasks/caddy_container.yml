@@ -1,1 +1,104 @@
 ---
+
+- name: Firewall open Port 80 and 443
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop:
+    - http
+    - https
+
+- name: Set kernel parameters
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_set: true
+    state: present
+    reload: true
+    sysctl_file: /etc/sysctl.d/caddy.conf
+  loop:
+    - {name: "net.ipv4.ip_unprivileged_port_start", value: "80"}
+
+# enable fallback nameserver in case pihole is running on the same host
+- name: Enable fallback nameserver in resolv.conf
+  ansible.builtin.lineinfile:
+    path: /etc/resolv.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+    - {regexp: '^nameserver 1\.1\.1\.1', line: 'nameserver 1.1.1.1'}
+  when: nameserver_fallback_needed | d(false) | bool
+
+- name: Create persistant container directories
+  become: "{{ podman_rootless | bool }}"
+  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    # owner: "{{ _owner }}"
+    # group: "{{ _group }}"
+    mode: '0755'
+  loop:
+    - "{{ _caddy_config_dir }}"
+    - "{{ _caddy_data_dir }}"
+
+- name: Template Caddyfile
+  become: "{{ podman_rootless | bool }}"
+  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  ansible.builtin.template:
+    src: "Caddyfile.j2"
+    dest: "{{ _caddy_config_dir }}/Caddyfile"
+    # owner: "{{ _owner }}"
+    # group: "{{ _group }}"
+    mode: "0600"
+
+- name: Include role sleif.podman podman_operation pod_create
+  ansible.builtin.include_role:
+    name: sleif.podman
+    apply:
+      tags:
+        - podman_pod_create
+  vars:
+    podman_operation: pod_create
+  tags: always
+
+- name: Create Caddy container
+  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  become: "{{ podman_rootless | bool }}"
+  containers.podman.podman_container:
+    name: "{{ container_name }}"
+    image: "docker.io/caddy"
+    # pod: "{{ pod_name | default(omit) }}"
+    state: created
+    restart_policy: always
+    recreate: "{{ podman_container_recreate | d(false) }}"
+    # log_driver: journald
+    network:
+      - "{{ podman_network_name }}"
+    ports:
+      - "80:80"
+      - "443:443"
+      # - "2023:2023"
+    volume:
+      - "{{ _caddy_config_dir }}:/config:rw,z"
+      - "{{ _caddy_data_dir }}:/data:rw,z"
+    mount:
+      - "type=bind,src={{ _caddy_config_dir }}/Caddyfile,dst=/etc/caddy/Caddyfile,relabel=shared"
+    env:
+      TZ: "Europe/Berlin"
+    timezone: "Europe/Berlin"
+  register: _container_start_results
+# - debug: var=_container_start_results
+
+- name: Include role sleif.podman podman_operation podman_generate_systemd
+  ansible.builtin.include_role:
+    name: sleif.podman
+    apply:
+      tags:
+        - podman_generate_systemd
+  vars:
+    podman_operation: podman_generate_systemd
+    target: "{{ pod_name if pod_name is defined and pod_name | length > 0 else container_name }}"
+  tags: always

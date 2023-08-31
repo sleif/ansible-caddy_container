@@ -1,0 +1,35 @@
+{{ caddy_target_uri }} {
+    encode gzip
+
+    # import from global Caddyfile
+    import accesslog
+    {% if caddy_basicauth_user is defined and caddy_basicauth_user is truthy %}
+    basicauth {{ caddy_basicauth_matcher | d('*') }} {
+        {{ caddy_basicauth_user }} {{ caddy_basicauth_password | string |
+          password_hash(hashtype='bcrypt',salt=caddy_target_uri | hash('sha1') | regex_replace('(.{22}).*', '\\1')) }}
+    }
+    {% endif %}
+    {# import errorhandling
+    import wellknown #}
+
+    {# handle * { #}
+    {% if caddy_operation == 'caddy_reverse_proxy' %}
+    reverse_proxy {{ caddy_reverse_proxy_src }}:{{ caddy_reverse_proxy_src_port }}
+    {# } #}
+    {% for line in caddy_proxy_config_lines %}
+    {{ line }}
+    {% endfor %}
+    {% endif %}
+
+    {% if caddy_operation == 'caddy_file_server' %}
+    handle * {
+        root * {{ _caddy_file_server_root }}
+        file_server
+    }
+	{# tls {
+		protocols tls1.3
+		curves x25519
+	}
+	encode zstd gzip #}
+    {% endif %}
+}

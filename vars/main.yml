@@ -1,5 +1,9 @@
 ---
 
-role_operations:
+caddy_operations:
   - caddy_container
+  - caddy_file_server
   - caddy_reverse_proxy
+
+caddy_acme_ca_api: https://acme-v02.api.letsencrypt.org/directory
+caddy_acme_ca_api_staging: https://acme-staging-v02.api.letsencrypt.org/directory

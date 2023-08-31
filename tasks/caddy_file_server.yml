@@ -1,0 +1,52 @@
+---
+
+# - name: Install python-passlib+bcrypt (caddy pw default) if required
+#   ansible.builtin.package:
+#     name: python-passlib+bcrypt
+#   when: caddy_basicauth_user is defined and caddy_basicauth_user is truthy
+
+- name: Podman generate systemd become block
+  become: "{{ podman_rootless | d(true) | bool }}"
+  become_user: "{{ podman_user if podman_rootless | d(true) | bool else omit }}"
+  block:
+    - name: Remove reverse proxy configuration for {{ caddy_target_uri }}
+      ansible.builtin.file:
+        path: "{{ _caddy_config_dir }}/{{ caddy_target_uri }}.caddy"
+        state: absent
+      when:
+        - caddy_proxy_state | d('present') == 'absent'
+
+    - name: Set fact _caddy_file_server_root
+      ansible.builtin.set_fact:
+        _caddy_file_server_root: "{{ caddy_file_server_root | d(_caddy_data_dir + '/' + caddy_target_uri) }}"
+
+    - name: Create file_server directories for {{ caddy_target_uri }}
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      with_items:
+        # - "{{ _caddy_file_server_root }}/www"
+        - "{{ _caddy_file_server_root }}"
+        # - "{{ _caddy_file_server_root }}/.well-known"
+
+    - name: Copy document root files for {{ caddy_target_uri }}
+      ansible.builtin.copy:
+        dest: "{{ _caddy_file_server_root }}"
+        # dest: "{{ _caddy_file_server_root }}/.well-known/dnt-policy.txt"
+        src: document_root/
+        mode: "0755"
+        setype: container_file_t
+
+    - name: Caddy setup proxy for sever {{ caddy_reverse_proxy_src }}
+      ansible.builtin.template:
+        src: "Caddyfile_target_config.j2"
+        dest: "{{ _caddy_config_dir }}/{{ caddy_target_uri }}.caddy"
+        mode: "0644"
+        seuser: "unconfined_u"
+        setype: "container_file_t"
+        lstrip_blocks: true
+      # notify:
+      #   - Reload Caddyserver
+      when:
+        - caddy_proxy_state | d('present') == 'present'

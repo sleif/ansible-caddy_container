@@ -1,0 +1,20 @@
+{{ caddy_target_uri }} {
+    encode gzip
+
+    # import from global Caddyfile
+    import accesslog
+    {% if caddy_basicauth_user is defined and caddy_basicauth_user is truthy %}
+    basicauth {{ caddy_basicauth_matcher | d('*') }} {
+        {{ caddy_basicauth_user }} {{ caddy_basicauth_password | string | password_hash('bcrypt') }}
+    }
+    {% endif %}
+    {# import errorhandling
+    import wellknown #}
+
+    {# handle * { #}
+    reverse_proxy {{ caddy_reverse_proxy_src }}:{{ caddy_reverse_proxy_src_port }}
+    {# } #}
+    {% for line in caddy_proxy_config_lines %}
+    {{ line }}
+    {% endfor %}
+}
