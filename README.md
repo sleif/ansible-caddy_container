@@ -30,6 +30,11 @@ caddy_operations:
 
 This role depends on sleif.podman.
 
+```sh
+ansible-galaxy install sleif.podman --force
+ansible-galaxy install sleif.caddy_container --force
+```
+
 ## Example Playbook
 
 ```yaml
