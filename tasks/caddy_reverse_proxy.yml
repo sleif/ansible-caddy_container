@@ -30,7 +30,7 @@
       when:
         - caddy_proxy_state | d('present') == 'present'
 
-    - name: Reload configuration # noqa: no-handler
+    - name: Reload configuration  # noqa: no-handler
       ansible.builtin.command: podman exec -w /config caddy caddy reload
       register: _result
       changed_when: _result.rc != 0
