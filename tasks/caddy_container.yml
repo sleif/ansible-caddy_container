@@ -64,12 +64,20 @@
     podman_operation: pod_create
   tags: always
 
+- name: Pull container image docker.io/caddy
+  become: "{{ podman_rootless | bool }}"
+  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  containers.podman.podman_image:
+    name: "docker.io/caddy"
+    tag: "{{ caddy_container_version }}"
+    force: true
+
 - name: Create Caddy container
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
   become: "{{ podman_rootless | bool }}"
   containers.podman.podman_container:
     name: "{{ container_name }}"
-    image: "docker.io/caddy"
+    image: "docker.io/caddy:{{ caddy_container_version }}"
     # pod: "{{ pod_name | default(omit) }}"
     state: created
     restart_policy: always

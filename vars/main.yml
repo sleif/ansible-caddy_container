@@ -1,5 +1,7 @@
 ---
 
+caddy_container_version: "latest"
+
 caddy_operations:
   - caddy_container
   - caddy_file_server
