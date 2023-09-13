@@ -46,14 +46,14 @@ ansible-galaxy install sleif.caddy_container --force
     podman_networks:
       podman_network_root:
         podman_network_name: 'podman_custom'
-        podman_network_subnet: '10.0.0.0/24'
+        podman_network_subnet: '10.0.0.0/16'
         podman_network_gateway: '10.0.0.1'
-        podman_network_iprange: '10.0.0.128/25'
+        # podman_network_iprange: '10.0.0.128/25'
       podman_network_rootless:
-        podman_network_name: 'podman_custom'
-        podman_network_subnet: '10.0.1.0/24'
-        podman_network_gateway: '10.0.1.1'
-        podman_network_iprange: '10.0.1.128/25'
+        podman_network_name: 'podman_custom_rootless'
+        podman_network_subnet: '10.1.0.0/24'
+        podman_network_gateway: '10.1.0.1'
+        # podman_network_iprange: '10.0.1.128/25'
     podman_rootless: true
     podman_network_name: "{{ podman_networks.podman_network_rootless.podman_network_name }}"
 

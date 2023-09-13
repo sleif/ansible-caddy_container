@@ -78,12 +78,13 @@
   containers.podman.podman_container:
     name: "{{ container_name }}"
     image: "docker.io/caddy:{{ caddy_container_version }}"
-    # pod: "{{ pod_name | default(omit) }}"
+    pod: "{{ pod_name | default(omit) }}"
     state: created
     restart_policy: always
     recreate: "{{ podman_container_recreate | d(false) }}"
     # log_driver: journald
     network:
+      # - "slirp4netns:port_handler=slirp4netns"
       - "{{ podman_network_name }}"
     ports:
       - "80:80"
@@ -91,9 +92,10 @@
       # - "2023:2023"
     volume:
       - "{{ _caddy_config_dir }}:/config:rw,z"
+      - "{{ _caddy_config_dir }}/Caddyfile:/etc/caddy/Caddyfile:rw,z"
       - "{{ _caddy_data_dir }}:/data:rw,z"
-    mount:
-      - "type=bind,src={{ _caddy_config_dir }}/Caddyfile,dst=/etc/caddy/Caddyfile,relabel=shared"
+    # mount:
+    #   - "type=bind,src={{ _caddy_config_dir }}/Caddyfile,dst=/etc/caddy/Caddyfile,relabel=shared"
     env:
       TZ: "Europe/Berlin"
     timezone: "Europe/Berlin"
