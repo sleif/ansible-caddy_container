@@ -13,32 +13,41 @@
       ansible.builtin.file:
         path: "{{ _caddy_config_dir }}/{{ caddy_target_uri }}.caddy"
         state: absent
+      register: _result
       when:
-        - caddy_proxy_state | d('present') == 'absent'
+        - caddy_file_server_state | d('present') == 'absent'
 
-    - name: Set fact _caddy_file_server_root
+    - name: evaluate _caddy_reload_required
       ansible.builtin.set_fact:
-        _caddy_file_server_root: "{{ caddy_file_server_root | d(_caddy_data_dir + '/' + caddy_target_uri) }}"
+        _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"
 
-    - name: Create file_server directories for {{ caddy_target_uri }}
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: directory
-        mode: "0755"
-      with_items:
-        # - "{{ _caddy_file_server_root }}/www"
-        - "{{ _caddy_file_server_root }}"
-        # - "{{ _caddy_file_server_root }}/.well-known"
+    - name: block for default file server root
+      when:
+        - not caddy_file_server_root is defined
+      block:
+        - name: Set fact _caddy_file_server_root_default
+          ansible.builtin.set_fact:
+            _caddy_file_server_root_default: "{{ caddy_file_server_root | d(_caddy_data_dir + '/' + caddy_target_uri) }}"
 
-    - name: Copy document root files for {{ caddy_target_uri }}
-      ansible.builtin.copy:
-        dest: "{{ _caddy_file_server_root }}"
-        # dest: "{{ _caddy_file_server_root }}/.well-known/dnt-policy.txt"
-        src: document_root/
-        mode: "0755"
-        setype: container_file_t
+        - name: Create file_server directories for {{ caddy_target_uri }}
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: directory
+            mode: "0755"
+          with_items:
+            # - "{{ _caddy_file_server_root_default }}/www"
+            - "{{ _caddy_file_server_root_default }}"
+            # - "{{ _caddy_file_server_root_default }}/.well-known"
 
-    - name: Caddy setup proxy for sever {{ caddy_reverse_proxy_src }}
+        - name: Copy document root files for {{ caddy_target_uri }}
+          ansible.builtin.copy:
+            dest: "{{ _caddy_file_server_root_default }}"
+            # dest: "{{ _caddy_file_server_root_default }}/.well-known/dnt-policy.txt"
+            src: document_root/
+            mode: "0755"
+            setype: container_file_t
+
+    - name: Caddy setup file_server for server {{ caddy_reverse_proxy_upstream_host }}
       ansible.builtin.template:
         src: "Caddyfile_target_config.j2"
         dest: "{{ _caddy_config_dir }}/{{ caddy_target_uri }}.caddy"
@@ -46,7 +55,14 @@
         seuser: "unconfined_u"
         setype: "container_file_t"
         lstrip_blocks: true
-      # notify:
-      #   - Reload Caddyserver
+      vars:
+        _caddy_header_lines: "{{ caddy_header_lines | d('') }}"
+        _caddy_global_config_lines: "{{ caddy_global_config_lines | d('') }}"
+        _caddy_file_server_config_lines: "{{ caddy_file_server_config_lines | d('') }}"
+      register: _result
       when:
-        - caddy_proxy_state | d('present') == 'present'
+        - caddy_file_server_state | d('present') == 'present'
+
+    - name: evaluate _caddy_reload_required
+      ansible.builtin.set_fact:
+        _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"

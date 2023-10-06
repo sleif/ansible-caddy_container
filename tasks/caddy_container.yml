@@ -52,16 +52,65 @@
     dest: "{{ _caddy_config_dir }}/Caddyfile"
     # owner: "{{ _owner }}"
     # group: "{{ _group }}"
+    lstrip_blocks: true
     mode: "0600"
+  register: _result
+  # notify: Reload caddy configuration
+  # check_mode: true
 
-- name: Include role sleif.podman podman_operation pod_create
+- name: evaluate _caddy_reload_required
+  ansible.builtin.set_fact:
+    _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"
+
+- name: create root.crt copy helper
+  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  become_method: containers.podman.podman_unshare
+  become: "{{ podman_rootless | bool }}"
+  ansible.builtin.copy:
+    dest: "{{ _caddy_config_dir }}/root.crt.sh"
+    content: |
+      #!/bin/sh
+      source_file="/config/root.crt"
+      destination_file="/etc/ssl/certs/root.crt"
+      # Check if the destination file exists
+      if [ ! -e "${destination_file}" ]; then
+        cp "${source_file}" "${destination_file}"
+        echo "File copied from ${source_file} to ${destination_file}"
+        /usr/sbin/update-ca-certificates
+        exit 2
+      else
+        exit 0
+      fi
+    mode: '0755'
+  when:
+    - caddy_acme_internal | d(false) | bool
+
+- name: write internal tls ca_root file
+  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  become_method: containers.podman.podman_unshare
+  become: "{{ podman_rootless | bool }}"
+  ansible.builtin.copy:
+    dest: "{{ _caddy_config_dir }}/root.crt"
+    content: "{{ acme_server_root_crt['content'] | b64decode }}"
+    mode: '0644'
+  # notify: Reload caddy configuration
+  register: _result
+  when:
+    - acme_server_root_crt['content'] is defined
+    - caddy_acme_internal | d(false) | bool
+
+- name: evaluate _caddy_reload_required
+  ansible.builtin.set_fact:
+    _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"
+
+- name: Include role sleif.podman podman_operation podman_pod_create
   ansible.builtin.include_role:
     name: sleif.podman
     apply:
       tags:
         - podman_pod_create
   vars:
-    podman_operation: pod_create
+    podman_operation: podman_pod_create
   tags: always
 
 - name: Pull container image docker.io/caddy
@@ -70,7 +119,7 @@
   containers.podman.podman_image:
     name: "docker.io/caddy"
     tag: "{{ caddy_container_version }}"
-    force: true
+    # force: true
 
 - name: Create Caddy container
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
@@ -83,19 +132,13 @@
     restart_policy: always
     recreate: "{{ podman_container_recreate | d(false) }}"
     # log_driver: journald
-    network:
-      # - "slirp4netns:port_handler=slirp4netns"
-      - "{{ podman_network_name }}"
-    ports:
-      - "80:80"
-      - "443:443"
-      # - "2023:2023"
+    network: "{{ podman_network_name if pod_name | d('') | length == 0 else [] }}"
+    publish: "{{ container_published_ports | default([]) }}"
     volume:
       - "{{ _caddy_config_dir }}:/config:rw,z"
       - "{{ _caddy_config_dir }}/Caddyfile:/etc/caddy/Caddyfile:rw,z"
       - "{{ _caddy_data_dir }}:/data:rw,z"
-    # mount:
-    #   - "type=bind,src={{ _caddy_config_dir }}/Caddyfile,dst=/etc/caddy/Caddyfile,relabel=shared"
+    volumes_from: "{{ caddy_container_volumes_from | d([]) }}"
     env:
       TZ: "Europe/Berlin"
     timezone: "Europe/Berlin"
@@ -110,5 +153,30 @@
         - podman_generate_systemd
   vars:
     podman_operation: podman_generate_systemd
-    target: "{{ pod_name if pod_name is defined and pod_name | length > 0 else container_name }}"
+    target: "{{ pod_name if pod_name | d('') is truthy else container_name }}"
   tags: always
+
+- name: slurp acme server
+  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  become_method: containers.podman.podman_unshare
+  become: "{{ podman_rootless | bool }}"
+  ansible.builtin.slurp:
+    src: "{{ _caddy_data_dir }}/caddy/pki/authorities/local/root.crt"
+  register: acme_server_root_crt
+  when: caddy_acme_server | d(false) | bool
+
+- name: copy internal tls ca_root file into /etc/ssl/certs/root.crt
+  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  become: "{{ podman_rootless | bool }}"
+  ansible.builtin.command: podman exec {{ container_name }} sh /config/root.crt.sh
+  register: _result
+  changed_when: _result.rc != 0
+  failed_when:
+    - _result.rc != 0
+    - _result.rc != 2
+  when:
+    - caddy_acme_internal | d(false) | bool
+
+- name: evaluate _caddy_restart_required
+  ansible.builtin.set_fact:
+    _caddy_restart_required: "{{ true if _caddy_restart_required | d(false) | bool or _result.changed | bool else false }}"

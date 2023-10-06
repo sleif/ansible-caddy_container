@@ -65,14 +65,15 @@ ansible-galaxy install sleif.caddy_container --force
     - {role: sleif.caddy_container, tags: "caddy, caddy_container, caddy_certs_for_ldap",
        container_name: caddy,
        caddy_operation: caddy_file_server,
+       caddy_file_server_state: present,
        caddy_target_uri: ldap.example.com}
     - {role: sleif.caddy_container, tags: "caddy, caddy_container, caddy_webservice, webservice",
        container_name: caddy,
        caddy_operation: caddy_reverse_proxy,
        caddy_target_uri: webservice.example.com,
-       caddy_reverse_proxy_src: webservice,
-       caddy_proxy_present: present,
-       caddy_reverse_proxy_src_port: 8080}
+       caddy_proxy_state: present,
+       caddy_reverse_proxy_upstream_host: webservice,
+       caddy_reverse_proxy_upstream_port: 8080}
 ```
 
 ## License

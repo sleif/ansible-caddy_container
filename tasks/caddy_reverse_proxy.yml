@@ -13,10 +13,15 @@
       ansible.builtin.file:
         path: "{{ _caddy_config_dir }}/{{ caddy_target_uri }}.caddy"
         state: absent
+      register: _result
       when:
         - caddy_proxy_state | d('present') == 'absent'
 
-    - name: Caddy setup proxy for sever {{ caddy_reverse_proxy_src }}
+    - name: evaluate _caddy_reload_required
+      ansible.builtin.set_fact:
+        _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"
+
+    - name: Caddy setup proxy from template for server {{ caddy_reverse_proxy_upstream_host }}
       ansible.builtin.template:
         src: "Caddyfile_target_config.j2"
         dest: "{{ _caddy_config_dir }}/{{ caddy_target_uri }}.caddy"
@@ -24,15 +29,15 @@
         seuser: "unconfined_u"
         setype: "container_file_t"
         lstrip_blocks: true
-      # notify:
-      #   - Reload Caddyserver
-      register: _template
+      vars:
+        _caddy_header_lines: "{{ caddy_header_lines | d('') }}"
+        _caddy_global_config_lines: "{{ caddy_global_config_lines | d('') }}"
+        _caddy_reverse_proxy_config_lines: "{{ caddy_reverse_proxy_config_lines | d('') }}"
+      register: _result
+      # check_mode: true
       when:
         - caddy_proxy_state | d('present') == 'present'
 
-    - name: Reload configuration  # noqa: no-handler
-      ansible.builtin.command: podman exec -w /config caddy caddy reload
-      register: _result
-      changed_when: _result.rc != 0
-      when:
-        - _template.changed | bool
+    - name: evaluate _caddy_reload_required
+      ansible.builtin.set_fact:
+        _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"

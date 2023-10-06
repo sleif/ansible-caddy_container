@@ -1,6 +1,6 @@
 ---
 
-# next task returns:
+# the next task returns:
 # - _container_storage_dir_base_local
 # - _container_storage_dir_base
 # - _group, _owner
@@ -16,8 +16,8 @@
 
 - name: Set additional facts
   ansible.builtin.set_fact:
-    _caddy_config_dir: "{{ _container_storage_dir_base }}/caddy/config"
-    _caddy_data_dir: "{{ _container_storage_dir_base }}/caddy/data"
+    _caddy_config_dir: "{{ _container_storage_dir_base }}/{{ container_name }}/config"
+    _caddy_data_dir: "{{ _container_storage_dir_base }}/{{ container_name }}/data"
 
 - name: Run tasks from {{ caddy_operation + '.yml' }}
   ansible.builtin.include_tasks:
@@ -28,3 +28,23 @@
   when:
     - caddy_operation in caddy_operations
   tags: always
+
+- name: Reload caddy configuration  # noqa: no-changed-when
+  become: "{{ podman_rootless | bool }}"
+  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  ansible.builtin.command: podman exec -w /config {{ container_name }} caddy reload
+  when: _caddy_reload_required | d(false) | bool
+
+- name: Restart caddy container {{ container_name }}  # noqa: no-changed-when
+  become: "{{ podman_rootless | bool }}"
+  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  ansible.builtin.command: podman restart {{ container_name }}
+  when: _caddy_restart_required | d(false) | bool
+
+- name: Restart caddy frontend container if defined  # noqa: no-changed-when
+  become: "{{ podman_rootless | bool }}"
+  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  ansible.builtin.command: podman restart {{ caddy_frontend_container }}
+  when:
+    - _caddy_restart_required | d(false) | bool
+    - caddy_frontend_container | d('') is truthy

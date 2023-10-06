@@ -1,8 +1,13 @@
-{{ caddy_target_uri }} {
-    encode gzip
+https://{{ caddy_target_uri }}:{{ caddy_target_uri_port | d('443') }} {
+    # encode gzip
 
     # import from global Caddyfile
     import accesslog
+
+    {% for line in _caddy_global_config_lines.splitlines() %}
+    {{ line }}
+    {% endfor %}
+
     {% if caddy_basicauth_user is defined and caddy_basicauth_user is truthy %}
     basicauth {{ caddy_basicauth_matcher | d('*') }} {
         {{ caddy_basicauth_user }} {{ caddy_basicauth_password | string |
@@ -13,10 +18,17 @@
     import wellknown #}
 
     {# handle * { #}
+
     {% if caddy_operation == 'caddy_reverse_proxy' %}
-    reverse_proxy {{ caddy_reverse_proxy_src }}:{{ caddy_reverse_proxy_src_port }}
+    reverse_proxy {{ caddy_reverse_proxy_upstream_protocol | d('') }}{{ caddy_reverse_proxy_upstream_host }}:{{ caddy_reverse_proxy_upstream_port }} {
+        # caddy_reverse_proxy_config_lines:
+        {% for line in _caddy_reverse_proxy_config_lines.splitlines() %}
+        {{ line }}
+        {% endfor %}
+    }
     header /* {
-        {% for line in caddy_proxy_config_header_lines | d([]) %}
+        # header lines comming from caddy_header_lines
+        {% for line in _caddy_header_lines.splitlines() %}
         {{ line }}
         {% endfor %}
         {# Strict-Transport-Security "max-age=15552000; includeSubDomains" #}
@@ -32,8 +44,22 @@
 
     {% if caddy_operation == 'caddy_file_server' %}
     handle * {
-        root * {{ _caddy_file_server_root }}
+        header /* {
+            {% for line in _caddy_header_lines.splitlines() %}
+            {{ line }}
+            {% endfor %}
+            {# Strict-Transport-Security "max-age=15552000; includeSubDomains" #}
+            {# Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" #}
+            {# X-Content-Type-Options nosniff always #}
+            {# X-Xss-Protection "1; mode=block" always #}
+            {# X-Frame-Options "SAMEORIGIN" always #}
+        }
+        root * {{ caddy_file_server_root | d(_caddy_file_server_root_default) }}
         file_server
+        {# {{ caddy_file_server_config_lines }} #}
+        {% for line in _caddy_file_server_config_lines.splitlines() %}
+        {{ line }}
+        {% endfor %}
     }
 	{# tls {
 		protocols tls1.3

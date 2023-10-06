@@ -1,24 +1,30 @@
 # General Caddyfile
 {
+
     # https://letsencrypt.org/docs/acme-protocol-updates/#api-endpoints
     {% if caddy_acme_staging | d(false) | bool %}
     acme_ca {{ caddy_acme_ca_api_staging }}
     {% else %}
     acme_ca {{ caddy_acme_ca_api }}
     {% endif %}
+    {% if caddy_acme_internal | d(false) %}
+    acme_ca_root /config/root.crt
+    # local_certs
+    {% endif %}
+
     admin 127.0.0.1:2019
     # admin off
-	email {{ letsencrypt_email }}
-	http_port 80
-	https_port 443
-	log default {
-		output stderr
-		format json
-		level {{ caddy_loglevel | d('info') }}
-	}
-	servers {
-		metrics
-	}
+    email {{ letsencrypt_email }}
+    http_port 80
+    https_port 443
+    log default {
+        output stderr
+        format json
+        level {{ caddy_loglevel | d('info') }}
+    }
+    servers {
+        metrics
+    }
 }
 
 (accesslog) {
@@ -40,6 +46,7 @@
 	}
 }
 
+
 {# (errorhandling) {
 	handle_errors {
 		rewrite * /{err.status_code}
@@ -60,5 +67,13 @@
 :443 {
 	tls {{ CADDY_CERT }} {{ CADDY_CERT_KEY }}
 } #}
+
+{% if caddy_acme_server | d(false) | bool %}
+# ACME Server
+{{ container_name }}.dns.podman {
+	acme_server
+	tls internal
+}
+{% endif %}
 
 import /config/*.caddy
