@@ -1,0 +1,10 @@
+---
+
+- name: slurp acme server
+  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  become_method: containers.podman.podman_unshare
+  become: "{{ podman_rootless | bool }}"
+  ansible.builtin.slurp:
+    src: "{{ _caddy_data_dir }}/caddy/pki/authorities/local/root.crt"
+  register: acme_server_root_crt
+  delegate_to: "{{ caddy_internal_acme_server_fqdn }}"

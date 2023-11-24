@@ -1,4 +1,7 @@
-https://{{ caddy_target_uri }}:{{ caddy_target_uri_port | d('443') }} {
+{% for _address in caddy_target_addresses | d(["https://" + caddy_config_name + ":443"]) %}
+{{ _address }}{% if not loop.last %},
+{% endif %}{% endfor %} {
+{# https://{{ caddy_config_name }}:{{ caddy_target_uri_port | d('443') }} { #}
     # encode gzip
 
     # import from global Caddyfile
@@ -11,7 +14,7 @@ https://{{ caddy_target_uri }}:{{ caddy_target_uri_port | d('443') }} {
     {% if caddy_basicauth_user is defined and caddy_basicauth_user is truthy %}
     basicauth {{ caddy_basicauth_matcher | d('*') }} {
         {{ caddy_basicauth_user }} {{ caddy_basicauth_password | string |
-          password_hash(hashtype='bcrypt',salt=caddy_target_uri | hash('sha1') | regex_replace('(.{22}).*', '\\1')) }}
+          password_hash(hashtype='bcrypt',salt=caddy_config_name | hash('sha1') | regex_replace('(.{22}).*', '\\1')) }}
     }
     {% endif %}
     {# import errorhandling

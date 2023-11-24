@@ -14,10 +14,10 @@
       files: sleif.podman/tasks/includes/podman_init_vars.yml
       paths: "{{ lookup('config', 'DEFAULT_ROLES_PATH') }}"
 
-- name: Set additional facts
+- name: Set additional facts for {{ container_name }}
   ansible.builtin.set_fact:
-    _caddy_config_dir: "{{ _container_storage_dir_base }}/{{ container_name }}/config"
-    _caddy_data_dir: "{{ _container_storage_dir_base }}/{{ container_name }}/data"
+    _caddy_config_dir: "{{ _container_storage_dir_base_local }}/{{ container_name }}/config"
+    _caddy_data_dir: "{{ _container_storage_dir_base_local }}/{{ container_name }}/data"
 
 - name: Run tasks from {{ caddy_operation + '.yml' }}
   ansible.builtin.include_tasks:
@@ -27,13 +27,7 @@
         - "{{ caddy_operation }}"
   when:
     - caddy_operation in caddy_operations
-  tags: always
-
-- name: Reload caddy configuration  # noqa: no-changed-when
-  become: "{{ podman_rootless | bool }}"
-  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
-  ansible.builtin.command: podman exec -w /config {{ container_name }} caddy reload
-  when: _caddy_reload_required | d(false) | bool
+  tags: "{{ caddy_operation }}"
 
 - name: Restart caddy container {{ container_name }}  # noqa: no-changed-when
   become: "{{ podman_rootless | bool }}"
@@ -41,7 +35,13 @@
   ansible.builtin.command: podman restart {{ container_name }}
   when: _caddy_restart_required | d(false) | bool
 
-- name: Restart caddy frontend container if defined  # noqa: no-changed-when
+- name: Reload caddy configuration {{ container_name }}  # noqa: no-changed-when
+  become: "{{ podman_rootless | bool }}"
+  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  ansible.builtin.command: podman exec -w /config {{ container_name }} caddy reload
+  when: _caddy_reload_required | d(false) | bool
+
+- name: Restart caddy frontend container {{ caddy_frontend_container }} if defined  # noqa: no-changed-when
   become: "{{ podman_rootless | bool }}"
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
   ansible.builtin.command: podman restart {{ caddy_frontend_container }}

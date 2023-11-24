@@ -1,10 +1,12 @@
 ---
 
-caddy_container_version: "2-alpine"
+caddy_container_version: "2.7.4-alpine"
+# caddy_container_version: "2-alpine"
 # caddy_container_version: "latest"
 
 caddy_operations:
-  - caddy_container
+  - caddy_container_create
+  - caddy_container_slurp_root_ca
   - caddy_file_server
   - caddy_reverse_proxy
 

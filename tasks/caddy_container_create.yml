@@ -58,7 +58,7 @@
   # notify: Reload caddy configuration
   # check_mode: true
 
-- name: evaluate _caddy_reload_required
+- name: evaluate _caddy_reload_required for {{ container_name }}
   ansible.builtin.set_fact:
     _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"
 
@@ -85,6 +85,34 @@
   when:
     - caddy_acme_internal | d(false) | bool
 
+- name: slurp rootca certificate from internal acme server
+  when:
+    - caddy_acme_internal | d(false) | bool
+  block:
+    - name: call ansible role sleif.caddy_container against caddy frontend
+      ansible.builtin.include_role:
+        name: sleif.caddy_container
+        apply:
+          tags: caddy_container_slurp_root_ca
+      vars:
+        caddy_operation: caddy_container_slurp_root_ca
+        container_name: "caddy-f6d-sbs6"
+        podman_rootless: true
+        _caddy_reload_required: false
+        _caddy_restart_required: false
+
+    - name: Include podman_init_vars.yml from sleif.podman
+      ansible.builtin.include_tasks: "{{ lookup('first_found', params) }}"
+      vars:
+        params:
+          files: sleif.podman/tasks/includes/podman_init_vars.yml
+          paths: "{{ lookup('config', 'DEFAULT_ROLES_PATH') }}"
+
+    - name: Set additional facts
+      ansible.builtin.set_fact:
+        _caddy_config_dir: "{{ _container_storage_dir_base_local }}/{{ container_name }}/config"
+        _caddy_data_dir: "{{ _container_storage_dir_base_local }}/{{ container_name }}/data"
+
 - name: write internal tls ca_root file
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
   become_method: containers.podman.podman_unshare
@@ -99,7 +127,7 @@
     - acme_server_root_crt['content'] is defined
     - caddy_acme_internal | d(false) | bool
 
-- name: evaluate _caddy_reload_required
+- name: evaluate _caddy_reload_required for {{ container_name }}
   ansible.builtin.set_fact:
     _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"
 
@@ -121,7 +149,7 @@
     tag: "{{ caddy_container_version }}"
     # force: true
 
-- name: Create Caddy container
+- name: Create Caddy container {{ container_name }}
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
   become: "{{ podman_rootless | bool }}"
   containers.podman.podman_container:
@@ -156,15 +184,6 @@
     target: "{{ pod_name if pod_name | d('') is truthy else container_name }}"
   tags: always
 
-- name: slurp acme server
-  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
-  become_method: containers.podman.podman_unshare
-  become: "{{ podman_rootless | bool }}"
-  ansible.builtin.slurp:
-    src: "{{ _caddy_data_dir }}/caddy/pki/authorities/local/root.crt"
-  register: acme_server_root_crt
-  when: caddy_acme_server | d(false) | bool
-
 - name: copy internal tls ca_root file into /etc/ssl/certs/root.crt
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
   become: "{{ podman_rootless | bool }}"
@@ -177,6 +196,6 @@
   when:
     - caddy_acme_internal | d(false) | bool
 
-- name: evaluate _caddy_restart_required
+- name: evaluate _caddy_restart_required for {{ container_name }}
   ansible.builtin.set_fact:
     _caddy_restart_required: "{{ true if _caddy_restart_required | d(false) | bool or _result.changed | bool else false }}"

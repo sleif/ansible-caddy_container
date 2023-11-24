@@ -9,22 +9,22 @@
   become: "{{ podman_rootless | d(true) | bool }}"
   become_user: "{{ podman_user if podman_rootless | d(true) | bool else omit }}"
   block:
-    - name: Remove reverse proxy configuration for {{ caddy_target_uri }}
+    - name: Remove reverse proxy configuration for {{ caddy_config_name }}
       ansible.builtin.file:
-        path: "{{ _caddy_config_dir }}/{{ caddy_target_uri }}.caddy"
+        path: "{{ _caddy_config_dir }}/{{ caddy_config_name }}.caddy"
         state: absent
       register: _result
       when:
         - caddy_proxy_state | d('present') == 'absent'
 
-    - name: evaluate _caddy_reload_required
+    - name: evaluate _caddy_reload_required for {{ container_name }}
       ansible.builtin.set_fact:
         _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"
 
     - name: Caddy setup proxy from template for server {{ caddy_reverse_proxy_upstream_host }}
       ansible.builtin.template:
         src: "Caddyfile_target_config.j2"
-        dest: "{{ _caddy_config_dir }}/{{ caddy_target_uri }}.caddy"
+        dest: "{{ _caddy_config_dir }}/{{ caddy_config_name }}.caddy"
         mode: "0o0644"
         seuser: "unconfined_u"
         setype: "container_file_t"
@@ -38,6 +38,6 @@
       when:
         - caddy_proxy_state | d('present') == 'present'
 
-    - name: evaluate _caddy_reload_required
+    - name: evaluate _caddy_reload_required for {{ container_name }}
       ansible.builtin.set_fact:
         _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"

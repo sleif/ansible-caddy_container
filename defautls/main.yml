@@ -4,3 +4,4 @@ container_name: "caddy"
 podman_network_name: "podman"
 podman_rootless: true
 caddy_acme_staging: false
+caddy_internal_acme_server_fqdn: "{{ container_name }}.dns.podman"

@@ -70,8 +70,11 @@
 
 {% if caddy_acme_server | d(false) | bool %}
 # ACME Server
-{{ container_name }}.dns.podman {
-	acme_server
+{{ caddy_internal_acme_server_fqdn }} {
+	acme_server {
+		ca local
+		lifetime 167h
+	}
 	tls internal
 }
 {% endif %}
