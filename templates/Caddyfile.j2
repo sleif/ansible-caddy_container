@@ -25,6 +25,13 @@
     servers {
         metrics
     }
+{% if caddy_acme_server | d(false) | bool %}
+    pki {
+        ca local {
+            intermediate_lifetime 100d
+        }
+    }
+{% endif %}
 }
 
 (accesslog) {
@@ -73,7 +80,7 @@
 {{ caddy_internal_acme_server_fqdn }} {
 	acme_server {
 		ca local
-		lifetime 167h
+		lifetime 90d
 	}
 	tls internal
 }
