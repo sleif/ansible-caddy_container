@@ -39,7 +39,9 @@
   become: "{{ podman_rootless | bool }}"
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
   ansible.builtin.command: podman exec -w /config {{ container_name }} caddy reload
-  when: _caddy_reload_required | d(false) | bool
+  when:
+    - not _caddy_restart_required | d(false) | bool
+    - _caddy_reload_required | d(false) | bool
 
 - name: Restart caddy frontend container {{ caddy_frontend_container }} if defined  # noqa: no-changed-when
   become: "{{ podman_rootless | bool }}"
