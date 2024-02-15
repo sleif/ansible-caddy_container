@@ -55,8 +55,6 @@
     lstrip_blocks: true
     mode: "0600"
   register: _result
-  # notify: Reload caddy configuration
-  # check_mode: true
 
 - name: evaluate _caddy_reload_required for {{ container_name }}
   ansible.builtin.set_fact:
@@ -147,7 +145,7 @@
   containers.podman.podman_image:
     name: "docker.io/caddy"
     tag: "{{ caddy_container_version }}"
-    # force: true
+    force: true
 
 - name: Create Caddy container {{ container_name }}
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
