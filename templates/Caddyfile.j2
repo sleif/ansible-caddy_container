@@ -1,39 +1,36 @@
 # General Caddyfile
 {
-
-    # https://letsencrypt.org/docs/acme-protocol-updates/#api-endpoints
-    {% if caddy_acme_staging | d(false) | bool %}
-    acme_ca {{ caddy_acme_ca_api_staging }}
-    {% else %}
-    acme_ca {{ caddy_acme_ca_api }}
-    {% endif %}
-    {% if caddy_acme_internal | d(false) %}
-    acme_ca_root /config/root.crt
-    # local_certs
-    {% endif %}
-
-    admin 127.0.0.1:2019
-    # admin off
-    email {{ letsencrypt_email }}
-    http_port 80
-    https_port 443
-    log default {
-        output stderr
-        format json
-        level {{ caddy_loglevel | d('info') }}
-    }
-    servers {
-        metrics
-    }
+	{% if not caddy_acme_internal | d(false) %}
+	# https://letsencrypt.org/docs/acme-protocol-updates/#api-endpoints
+	{% if caddy_acme_staging | d(false) | bool %}
+	acme_ca {{ caddy_acme_ca_api_staging }}
+	{% else %}
+	acme_ca {{ caddy_acme_ca_api }}
+	{% endif %}
+	{% endif %}
+	admin 127.0.0.1:2019
+	# admin off
+	email {{ letsencrypt_email }}
+	http_port 80
+	https_port 443
+	log default {
+		output stderr
+		format json
+		level {{ caddy_loglevel | d('error') }}
+	}
+	servers {
+		metrics
+		{% if caddy_trusted_proxies | d([]) is truthy %}		trusted_proxies static{% for _trusted_proxy in caddy_trusted_proxies %} {{ _trusted_proxy }}{% endfor +%}
+		{% endif %}
+	}
 {% if caddy_acme_server | d(false) | bool %}
-    pki {
-        ca local {
-            intermediate_lifetime 100d
-        }
-    }
+	pki {
+		ca local {
+			intermediate_lifetime 100d
+		}
+	}
 {% endif %}
 }
-
 (accesslog) {
 	log {
 		output stderr
@@ -52,8 +49,6 @@
 		level {{ caddy_loglevel | d('info') }}
 	}
 }
-
-
 {# (errorhandling) {
 	handle_errors {
 		rewrite * /{err.status_code}
@@ -63,14 +58,12 @@
 		}
 	}
 } #}
-
 {# (wellknown) {
 	handle_path /.well-known/* {
 		root * /srv/well-known
 		file_server
 	}
 }
-
 :443 {
 	tls {{ CADDY_CERT }} {{ CADDY_CERT_KEY }}
 } #}
@@ -83,6 +76,18 @@
 		lifetime 90d
 	}
 	tls internal
+}
+{% endif %}
+{% if caddy_acme_internal | d(false) %}
+# Request certificate for this upstream host
+https://{{ ansible_fqdn }} {
+	handle {
+		respond "Nothing to see here - go away and just let me fetch my certificate for {{ ansible_fqdn }}!"
+	}
+	tls {
+		ca https://{{ caddy_internal_acme_server_fqdn }}/acme/local/directory
+		ca_root /config/root.crt
+	}
 }
 {% endif %}
 
