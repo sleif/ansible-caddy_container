@@ -1,7 +1,7 @@
 ---
 
-caddy_container_version: "2.7.4-alpine"
-# caddy_container_version: "2-alpine"
+# caddy_container_version: "2.7.4-alpine"
+caddy_container_version: "2-alpine"
 # caddy_container_version: "latest"
 
 caddy_operations:
