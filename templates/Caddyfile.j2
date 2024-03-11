@@ -8,8 +8,8 @@
 	acme_ca {{ caddy_acme_ca_api }}
 	{% endif %}
 	{% endif %}
-	# admin 127.0.0.1:2019
-	admin off
+	admin 127.0.0.1:2019
+	# admin off
 	email {{ letsencrypt_email }}
 	http_port 80
 	https_port 443

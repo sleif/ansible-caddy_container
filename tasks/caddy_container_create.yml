@@ -160,6 +160,7 @@
     # log_driver: journald
     network: "{{ podman_network_name if pod_name | d('') | length == 0 else [] }}"
     publish: "{{ container_published_ports | default([]) }}"
+    memory: "{{ container_limit_memory | default(omit) }}"
     volume:
       - "{{ _caddy_config_dir }}:/config:rw,z"
       - "{{ _caddy_config_dir }}/Caddyfile:/etc/caddy/Caddyfile:rw,z"
