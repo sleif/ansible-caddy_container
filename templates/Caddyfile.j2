@@ -26,7 +26,7 @@
 {% if caddy_acme_server | d(false) | bool %}
 	pki {
 		ca local {
-			intermediate_lifetime 100d
+			intermediate_lifetime 30d
 		}
 	}
 {% endif %}
@@ -73,7 +73,8 @@
 {{ caddy_internal_acme_server_fqdn }} {
 	acme_server {
 		ca local
-		lifetime 90d
+		lifetime 7d
+		# sign_with_root
 	}
 	tls internal
 }
