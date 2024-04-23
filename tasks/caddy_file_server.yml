@@ -47,6 +47,14 @@
             mode: "0755"
             setype: container_file_t
 
+        - name: Caddy setup file_server from template for {{ caddy_config_name }}
+          ansible.builtin.template:
+            src: "{{ 'imprint.html.j2' if caddy_imprint is defined and caddy_file_server_with_imprint | d(false) | bool else 'index.html.j2' }}"
+            dest: "{{ _caddy_file_server_root_default ~ '/index.html' }}"
+            mode: "0644"
+            setype: "container_file_t"
+            lstrip_blocks: true
+
     - name: Caddy setup file_server from template for {{ caddy_config_name }}
       ansible.builtin.template:
         src: "Caddyfile_target_config.j2"

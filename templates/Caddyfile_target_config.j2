@@ -51,7 +51,7 @@
 			{# X-Xss-Protection "1; mode=block" always #}
 			{# X-Frame-Options "SAMEORIGIN" always #}
 		}
-		root * {{ caddy_file_server_root | d(_caddy_file_server_root_default) }}
+		root * {{ caddy_file_server_root | d('/data/' ~ caddy_config_name ~'/') }}
 		file_server
 		{# {{ caddy_file_server_config_lines }} #}
 		{% for line in _caddy_file_server_config_lines.splitlines() %}
