@@ -81,7 +81,7 @@
 {% endif %}
 {% if caddy_acme_internal | d(false) %}
 # Request certificate for this upstream host
-https://{{ ansible_fqdn }} {
+https://{{ ansible_fqdn if caddy_published | d(true) | bool else pod_name ~ '.dns.podman' if pod_name | d('') is truthy else container_name ~ '.dns.podman' }} {
 	handle {
 		respond "Nothing to see here - go away and just let me fetch my certificate for {{ ansible_fqdn }}!"
 	}

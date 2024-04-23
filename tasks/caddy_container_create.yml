@@ -94,7 +94,7 @@
           tags: caddy_container_slurp_root_ca
       vars:
         caddy_operation: caddy_container_slurp_root_ca
-        container_name: "caddy-f6d-sbs6"
+        container_name: "{{ caddy_frontend_container_name }}"
         podman_rootless: true
         _caddy_reload_required: false
         _caddy_restart_required: false

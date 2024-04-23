@@ -7,4 +7,4 @@
   ansible.builtin.slurp:
     src: "{{ _caddy_data_dir }}/caddy/pki/authorities/local/root.crt"
   register: acme_server_root_crt
-  delegate_to: "{{ caddy_internal_acme_server_fqdn }}"
+  delegate_to: "{{ caddy_internal_acme_server_fqdn_hn | d(caddy_internal_acme_server_fqdn) }}"
