@@ -56,7 +56,7 @@
     mode: "0600"
   register: _result
 
-- name: evaluate _caddy_reload_required for {{ container_name }}
+- name: evaluate _caddy_reload_required for {{ caddy_container_name }}
   ansible.builtin.set_fact:
     _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"
 
@@ -94,7 +94,7 @@
           tags: caddy_container_slurp_root_ca
       vars:
         caddy_operation: caddy_container_slurp_root_ca
-        container_name: "{{ caddy_frontend_container_name }}"
+        caddy_container_name: "{{ caddy_frontend_container_name }}"
         podman_rootless: true
         _caddy_reload_required: false
         _caddy_restart_required: false
@@ -108,8 +108,8 @@
 
     - name: Set additional facts
       ansible.builtin.set_fact:
-        _caddy_config_dir: "{{ _container_storage_dir_base_local }}/{{ container_name }}/config"
-        _caddy_data_dir: "{{ _container_storage_dir_base_local }}/{{ container_name }}/data"
+        _caddy_config_dir: "{{ _container_storage_dir_base_local }}/{{ caddy_container_name }}/config"
+        _caddy_data_dir: "{{ _container_storage_dir_base_local }}/{{ caddy_container_name }}/data"
 
 - name: write internal tls ca_root file
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
@@ -125,9 +125,13 @@
     - acme_server_root_crt['content'] is defined
     - caddy_acme_internal | d(false) | bool
 
-- name: evaluate _caddy_reload_required for {{ container_name }}
+- name: evaluate _caddy_reload_required for {{ caddy_container_name }}
   ansible.builtin.set_fact:
     _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"
+
+
+
+
 
 - name: Include role sleif.podman podman_operation podman_pod_create
   ansible.builtin.include_role:
@@ -147,11 +151,11 @@
     tag: "{{ caddy_container_version }}"
     force: true
 
-- name: Create Caddy container {{ container_name }}
+- name: Create Caddy container {{ caddy_container_name }}
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
   become: "{{ podman_rootless | bool }}"
   containers.podman.podman_container:
-    name: "{{ container_name }}"
+    name: "{{ caddy_container_name }}"
     image: "docker.io/caddy:{{ caddy_container_version }}"
     pod: "{{ pod_name | default(omit) }}"
     state: created
@@ -180,13 +184,55 @@
         - podman_generate_systemd
   vars:
     podman_operation: podman_generate_systemd
-    target: "{{ pod_name if pod_name | d('') is truthy else container_name }}"
+    target: "{{ pod_name if pod_name | d('') is truthy else caddy_container_name }}"
   tags: always
+
+
+
+
+- name: include_role sleif.podman podman_operation podman_create_container for vtt-pf2e
+  ansible.builtin.include_role:
+    name: sleif.podman
+    apply:
+      tags:
+        - podman_container_create
+  vars:
+    # podman_rootless: true
+    # podman_network_name: "{{ podman_networks.podman_network_rootless.podman_network_name if podman_rootless | bool else
+    #   podman_networks.podman_network_root.podman_network_name }}"
+    podman_operation: podman_container_create
+    caddy_container_name: 'vtt-pf2e'
+    target: "{{ pod_name if pod_name | d('') is truthy else caddy_container_name }}"
+    _container:
+      name: '{{ caddy_container_name }}'
+      image:
+        name: 'docker.io/caddy'
+        tag: '{{ caddy_container_version }}'
+      publish: '{{ container_published_ports | default([]) }}'
+      volumes:
+        - "{{ _caddy_config_dir }}:/config:rw,z"
+        - "{{ _caddy_config_dir }}/Caddyfile:/etc/caddy/Caddyfile:rw,z"
+        - "{{ _caddy_data_dir }}:/data:rw,z"
+      volumes_from: "{{ caddy_container_volumes_from | d([]) }}"
+      workdir: '/foundryvtt'
+      command:
+        - "node"
+        - "resources/app/main.js"
+        - "--dataPath=/home/vtt/foundrydata"
+      # secrets:
+      #   - {'name': 'webpassword', 'data': 'password'}
+      #   - {'name': 'webpassword2', 'data': 'password'}
+  tags: vtt-pf2e
+
+
+
+
+
 
 - name: copy internal tls ca_root file into /etc/ssl/certs/root.crt
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
   become: "{{ podman_rootless | bool }}"
-  ansible.builtin.command: podman exec {{ container_name }} sh /config/root.crt.sh
+  ansible.builtin.command: podman exec {{ caddy_container_name }} sh /config/root.crt.sh
   register: _result
   changed_when: _result.rc != 0
   failed_when:
@@ -195,6 +241,6 @@
   when:
     - caddy_acme_internal | d(false) | bool
 
-- name: evaluate _caddy_restart_required for {{ container_name }}
+- name: evaluate _caddy_restart_required for {{ caddy_container_name }}
   ansible.builtin.set_fact:
     _caddy_restart_required: "{{ true if _caddy_restart_required | d(false) | bool or _result.changed | bool else false }}"

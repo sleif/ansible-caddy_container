@@ -1,11 +1,11 @@
 ---
 
-container_name: "caddy"
+caddy_container_name: "caddy"
 caddy_published: true
 podman_network_name: "podman"
 podman_rootless: true
 caddy_acme_staging: false
-caddy_internal_acme_server_fqdn: "{{ container_name }}.dns.podman"
+caddy_internal_acme_server_fqdn: "{{ caddy_container_name }}.dns.podman"
 
 caddy_file_server_with_imprint: false
 caddy_imprint:

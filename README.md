@@ -61,14 +61,14 @@ ansible-galaxy install sleif.caddy_container --force
     - {role: sleif.podman, tags: "podman_role",
        podman_operation: "podman_install"}
     - {role: sleif.caddy_container, tags: "caddy, caddy_container", caddy_container_name: "caddy", caddy_operation: "caddy_container",
-       container_name: caddy}
+       caddy_container_name: caddy}
     - {role: sleif.caddy_container, tags: "caddy, caddy_container, caddy_certs_for_ldap",
-       container_name: caddy,
+       caddy_container_name: caddy,
        caddy_operation: caddy_file_server,
        caddy_file_server_state: present,
        caddy_config_name: ldap.example.com}
     - {role: sleif.caddy_container, tags: "caddy, caddy_container, caddy_webservice, webservice",
-       container_name: caddy,
+       caddy_container_name: caddy,
        caddy_operation: caddy_reverse_proxy,
        caddy_config_name: webservice.example.com,
        caddy_proxy_state: present,

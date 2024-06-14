@@ -17,7 +17,7 @@
       when:
         - caddy_proxy_state | d('present') == 'absent'
 
-    - name: evaluate _caddy_reload_required for {{ container_name }}
+    - name: evaluate _caddy_reload_required for {{ caddy_container_name }}
       ansible.builtin.set_fact:
         _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"
 
@@ -38,6 +38,6 @@
       when:
         - caddy_proxy_state | d('present') == 'present'
 
-    - name: evaluate _caddy_reload_required for {{ container_name }}
+    - name: evaluate _caddy_reload_required for {{ caddy_container_name }}
       ansible.builtin.set_fact:
         _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"

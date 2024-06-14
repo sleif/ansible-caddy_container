@@ -14,10 +14,10 @@
       files: sleif.podman/tasks/includes/podman_init_vars.yml
       paths: "{{ lookup('config', 'DEFAULT_ROLES_PATH') }}"
 
-- name: Set additional facts for {{ container_name }}
+- name: Set additional facts for {{ caddy_container_name }}
   ansible.builtin.set_fact:
-    _caddy_config_dir: "{{ _container_storage_dir_base_local }}/{{ container_name }}/config"
-    _caddy_data_dir: "{{ _container_storage_dir_base_local }}/{{ container_name }}/data"
+    _caddy_config_dir: "{{ _container_storage_dir_base_local }}/{{ caddy_container_name }}/config"
+    _caddy_data_dir: "{{ _container_storage_dir_base_local }}/{{ caddy_container_name }}/data"
 
 - name: Run tasks from {{ caddy_operation + '.yml' }}
   ansible.builtin.include_tasks:
@@ -29,16 +29,16 @@
     - caddy_operation in caddy_operations
   tags: "{{ caddy_operation }}"
 
-- name: Restart caddy container {{ container_name }}  # noqa: no-changed-when
+- name: Restart caddy container {{ caddy_container_name }}  # noqa: no-changed-when
   become: "{{ podman_rootless | bool }}"
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
-  ansible.builtin.command: podman restart {{ container_name }}
+  ansible.builtin.command: podman restart {{ caddy_container_name }}
   when: _caddy_restart_required | d(false) | bool
 
-- name: Reload caddy configuration {{ container_name }}  # noqa: no-changed-when
+- name: Reload caddy configuration {{ caddy_container_name }}  # noqa: no-changed-when
   become: "{{ podman_rootless | bool }}"
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
-  ansible.builtin.command: podman exec -w /config {{ container_name }} caddy reload
+  ansible.builtin.command: podman exec -w /config {{ caddy_container_name }} caddy reload
   when:
     - not _caddy_restart_required | d(false) | bool
     - _caddy_reload_required | d(false) | bool
