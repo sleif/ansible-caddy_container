@@ -71,12 +71,12 @@
       source_file="/config/root.crt"
       destination_file="/etc/ssl/certs/root.crt"
       # Check if the destination file exists
-      if [ ! -e "${destination_file}" ]; then
+      if diff -q "${source_file}" "${destination_file}" ; then
+        exit 0
+      else
         cp "${source_file}" "${destination_file}"
         echo "File copied from ${source_file} to ${destination_file}"
         /usr/sbin/update-ca-certificates
-        exit 2
-      else
         exit 0
       fi
     mode: '0755'
@@ -129,66 +129,59 @@
   ansible.builtin.set_fact:
     _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"
 
+# - name: Include role sleif.podman podman_operation podman_pod_create
+#   ansible.builtin.include_role:
+#     name: sleif.podman
+#     apply:
+#       tags:
+#         - podman_pod_create
+#   vars:
+#     podman_operation: podman_pod_create
+#   tags: always
 
+# - name: Pull container image docker.io/caddy
+#   become: "{{ podman_rootless | bool }}"
+#   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+#   containers.podman.podman_image:
+#     name: "docker.io/caddy"
+#     tag: "{{ caddy_container_version }}"
+#     force: true
 
+# - name: Create Caddy container {{ caddy_container_name }}
+#   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+#   become: "{{ podman_rootless | bool }}"
+#   containers.podman.podman_container:
+#     name: "{{ caddy_container_name }}"
+#     image: "docker.io/caddy:{{ caddy_container_version }}"
+#     pod: "{{ pod_name | default(omit) }}"
+#     state: created
+#     restart_policy: always
+#     recreate: "{{ podman_container_recreate | d(false) }}"
+#     # log_driver: journald
+#     network: "{{ podman_network_name if pod_name | d('') | length == 0 else [] }}"
+#     publish: "{{ container_published_ports | default([]) }}"
+#     memory: "{{ container_limit_memory | default(omit) }}"
+#     volume:
+#       - "{{ _caddy_config_dir }}:/config:rw,z"
+#       - "{{ _caddy_config_dir }}/Caddyfile:/etc/caddy/Caddyfile:rw,z"
+#       - "{{ _caddy_data_dir }}:/data:rw,z"
+#     volumes_from: "{{ caddy_container_volumes_from | d([]) }}"
+#     env:
+#       TZ: "Europe/Berlin"
+#     timezone: "Europe/Berlin"
+#   register: _container_start_results
+# # - debug: var=_container_start_results
 
-
-- name: Include role sleif.podman podman_operation podman_pod_create
-  ansible.builtin.include_role:
-    name: sleif.podman
-    apply:
-      tags:
-        - podman_pod_create
-  vars:
-    podman_operation: podman_pod_create
-  tags: always
-
-- name: Pull container image docker.io/caddy
-  become: "{{ podman_rootless | bool }}"
-  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
-  containers.podman.podman_image:
-    name: "docker.io/caddy"
-    tag: "{{ caddy_container_version }}"
-    force: true
-
-- name: Create Caddy container {{ caddy_container_name }}
-  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
-  become: "{{ podman_rootless | bool }}"
-  containers.podman.podman_container:
-    name: "{{ caddy_container_name }}"
-    image: "docker.io/caddy:{{ caddy_container_version }}"
-    pod: "{{ pod_name | default(omit) }}"
-    state: created
-    restart_policy: always
-    recreate: "{{ podman_container_recreate | d(false) }}"
-    # log_driver: journald
-    network: "{{ podman_network_name if pod_name | d('') | length == 0 else [] }}"
-    publish: "{{ container_published_ports | default([]) }}"
-    memory: "{{ container_limit_memory | default(omit) }}"
-    volume:
-      - "{{ _caddy_config_dir }}:/config:rw,z"
-      - "{{ _caddy_config_dir }}/Caddyfile:/etc/caddy/Caddyfile:rw,z"
-      - "{{ _caddy_data_dir }}:/data:rw,z"
-    volumes_from: "{{ caddy_container_volumes_from | d([]) }}"
-    env:
-      TZ: "Europe/Berlin"
-    timezone: "Europe/Berlin"
-  register: _container_start_results
-# - debug: var=_container_start_results
-
-- name: Include role sleif.podman podman_operation podman_generate_systemd
-  ansible.builtin.include_role:
-    name: sleif.podman
-    apply:
-      tags:
-        - podman_generate_systemd
-  vars:
-    podman_operation: podman_generate_systemd
-    target: "{{ pod_name if pod_name | d('') is truthy else caddy_container_name }}"
-  tags: always
-
-
-
+# - name: Include role sleif.podman podman_operation podman_generate_systemd
+#   ansible.builtin.include_role:
+#     name: sleif.podman
+#     apply:
+#       tags:
+#         - podman_generate_systemd
+#   vars:
+#     podman_operation: podman_generate_systemd
+#     target: "{{ pod_name if pod_name | d('') is truthy else caddy_container_name }}"
+#   tags: always
 
 - name: include_role sleif.podman podman_operation podman_create_container for vtt-pf2e
   ansible.builtin.include_role:
@@ -201,35 +194,44 @@
     # podman_network_name: "{{ podman_networks.podman_network_rootless.podman_network_name if podman_rootless | bool else
     #   podman_networks.podman_network_root.podman_network_name }}"
     podman_operation: podman_container_create
-    caddy_container_name: 'vtt-pf2e'
+    container_name: '{{ caddy_container_name }}'
     target: "{{ pod_name if pod_name | d('') is truthy else caddy_container_name }}"
     _container:
-      name: '{{ caddy_container_name }}'
+      name: '{{ container_name }}'
       image:
         name: 'docker.io/caddy'
         tag: '{{ caddy_container_version }}'
+      # command: [
+      #   "caddy",
+      #   "run",
+      #   "--config",
+      #   "/etc/caddy/Caddyfile",
+      #   "--adapter",
+      #   "cadddyfile"
+      # ]
+      command:
+        - sh
+        - "-c"
+        - "'/config/root.crt.sh; exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile'"
+      memory: "{{ container_limit_memory | default(omit) }}"
+      network: "slirp4netns:port_handler=slirp4netns"
       publish: '{{ container_published_ports | default([]) }}'
       volumes:
-        - "{{ _caddy_config_dir }}:/config:rw,z"
-        - "{{ _caddy_config_dir }}/Caddyfile:/etc/caddy/Caddyfile:rw,z"
-        - "{{ _caddy_data_dir }}:/data:rw,z"
+        - {'host': '{{ _caddy_config_dir }}', 'target': '/config:rw,z', 'mode': '0755'}
+        - {'host': '{{ _caddy_config_dir }}/Caddyfile', 'target': '/etc/caddy/Caddyfile:rw,z', 'state': 'present'}
+        - {'host': '{{ _caddy_data_dir }}', 'target': '/data:rw,z', 'mode': '0755'}
       volumes_from: "{{ caddy_container_volumes_from | d([]) }}"
-      workdir: '/foundryvtt'
-      command:
-        - "node"
-        - "resources/app/main.js"
-        - "--dataPath=/home/vtt/foundrydata"
       # secrets:
       #   - {'name': 'webpassword', 'data': 'password'}
       #   - {'name': 'webpassword2', 'data': 'password'}
-  tags: vtt-pf2e
+      env:
+        TZ: "Europe/Berlin"
+      timezone: "Europe/Berlin"
+      # service:
+      #   execstartpost: podman exec {{ caddy_container_name }} sh /config/root.crt.sh
+  tags: podman_container_create
 
-
-
-
-
-
-- name: copy internal tls ca_root file into /etc/ssl/certs/root.crt
+- name: call helper script /config/root.crt.sh to copy internal tls ca_root file into /etc/ssl/certs/root.crt
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
   become: "{{ podman_rootless | bool }}"
   ansible.builtin.command: podman exec {{ caddy_container_name }} sh /config/root.crt.sh
@@ -237,7 +239,6 @@
   changed_when: _result.rc != 0
   failed_when:
     - _result.rc != 0
-    - _result.rc != 2
   when:
     - caddy_acme_internal | d(false) | bool
 

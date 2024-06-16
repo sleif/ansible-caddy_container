@@ -9,7 +9,7 @@
 	{{ line }}
 	{% endfor %}
 	{% if caddy_basicauth_user is defined and caddy_basicauth_user is truthy %}
-	basicauth {{ caddy_basicauth_matcher | d('*') }} {
+	basic_auth {{ caddy_basicauth_matcher | d('*') }} {
 		{{ caddy_basicauth_user }} {{ caddy_basicauth_password | string |
 		  password_hash(hashtype='bcrypt',salt=caddy_config_name | hash('sha1') | regex_replace('(.{22}).*', '\\1')) }}
 	}
