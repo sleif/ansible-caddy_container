@@ -43,7 +43,7 @@
     - not _caddy_restart_required | d(false) | bool
     - _caddy_reload_required | d(false) | bool
 
-- name: Restart caddy frontend container {{ caddy_frontend_container }} if defined  # noqa: no-changed-when
+- name: Restart caddy frontend container if defined {{ caddy_frontend_container }}  # noqa: no-changed-when
   become: "{{ podman_rootless | bool }}"
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
   ansible.builtin.command: podman restart {{ caddy_frontend_container }}

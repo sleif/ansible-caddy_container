@@ -1,7 +1,7 @@
 ---
 
 - name: slurp acme server
-  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+  become_user: "{{ podman_user | d('podman') if podman_rootless | bool else omit }}"
   become_method: containers.podman.podman_unshare
   become: "{{ podman_rootless | bool }}"
   ansible.builtin.slurp:
