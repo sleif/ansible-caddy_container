@@ -29,20 +29,6 @@
     - caddy_operation in caddy_operations
   tags: "{{ caddy_operation }}"
 
-- name: Restart caddy container {{ caddy_container_name }}  # noqa: no-changed-when
-  become: "{{ podman_rootless | bool }}"
-  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
-  ansible.builtin.command: podman restart {{ caddy_container_name }}
-  when: _caddy_restart_required | d(false) | bool
-
-- name: Reload caddy configuration {{ caddy_container_name }}  # noqa: no-changed-when
-  become: "{{ podman_rootless | bool }}"
-  become_user: "{{ podman_user if podman_rootless | bool else omit }}"
-  ansible.builtin.command: podman exec -w /config {{ caddy_container_name }} caddy reload
-  when:
-    - not _caddy_restart_required | d(false) | bool
-    - _caddy_reload_required | d(false) | bool
-
 - name: Restart caddy frontend container if defined {{ caddy_frontend_container }}  # noqa: no-changed-when
   become: "{{ podman_rootless | bool }}"
   become_user: "{{ podman_user if podman_rootless | bool else omit }}"
@@ -50,3 +36,27 @@
   when:
     - _caddy_restart_required | d(false) | bool
     - caddy_frontend_container | d('') is truthy
+
+- name: Block reload caddy configuration
+  when:
+    - not _caddy_restart_required | d(false) | bool
+    - _caddy_reload_required | d(false) | bool
+  block:
+    - name: Reload caddy configuration {{ caddy_container_name }}  # noqa: no-changed-when
+      become: "{{ podman_rootless | bool }}"
+      become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+      ansible.builtin.command: podman exec -w /config {{ caddy_container_name }} caddy reload
+    - name: reset _caddy_reload_required to false
+      ansible.builtin.set_fact:
+        _caddy_reload_required: false
+
+- name: Block restart caddy container
+  when: _caddy_restart_required | d(false) | bool
+  block:
+    - name: Restart caddy container {{ caddy_container_name }}  # noqa: no-changed-when
+      become: "{{ podman_rootless | bool }}"
+      become_user: "{{ podman_user if podman_rootless | bool else omit }}"
+      ansible.builtin.command: podman restart {{ caddy_container_name }}
+    - name: reset _caddy_restart_required to false
+      ansible.builtin.set_fact:
+        _caddy_restart_required: false
