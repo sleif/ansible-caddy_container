@@ -133,7 +133,7 @@
   ansible.builtin.set_fact:
     _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"
 
-- name: include_role sleif.podman podman_operation podman_create_container for vtt-pf2e
+- name: include_role sleif.podman podman_operation podman_create_container for caddy
   ansible.builtin.include_role:
     name: sleif.podman
     apply:
