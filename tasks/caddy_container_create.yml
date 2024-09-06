@@ -133,6 +133,14 @@
   ansible.builtin.set_fact:
     _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"
 
+- name: set_fact _build_images
+  ansible.builtin.set_fact:
+    _build_images:
+      - name: "{{ caddy_container_image }}"
+        tag: "{{ caddy_container_build_version }}"
+  when:
+    - caddy_custom_build_required
+
 - name: include_role sleif.podman podman_operation podman_create_container for caddy
   ansible.builtin.include_role:
     name: sleif.podman
@@ -149,8 +157,19 @@
     _container:
       name: '{{ container_name }}'
       image:
-        name: 'docker.io/caddy'
-        tag: '{{ caddy_container_version }}'
+        name: "{{ caddy_container_image }}"
+        tag: "{{ caddy_container_version }}"
+      build_required: "{{ caddy_custom_build_required }}"
+      additional_images: "{{ _build_images | default([]) }}"
+      containerfile_content: |-
+        FROM {{ caddy_container_image }}:{{ caddy_container_build_version }} AS builder
+        RUN xcaddy build {% if caddy_container_build_plugins | d([]) | length > 0 %}\
+        {% for plugin in caddy_container_build_plugins %}
+        --with {{ plugin }}{% if not loop.last %} \{% endif +%}
+        {% endfor %}
+        {% endif +%}
+        FROM {{ caddy_container_image }}:{{ caddy_container_version }}
+        COPY --from=builder /usr/bin/caddy /usr/bin/caddy
       # command: [
       #   "caddy",
       #   "run",

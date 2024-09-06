@@ -1,8 +1,17 @@
 ---
 
 # caddy_container_version: "2.7.4-alpine"
+caddy_container_image_name: "caddy"
+caddy_container_image: "docker.io/caddy"
 caddy_container_version: "2-alpine"
+caddy_container_build_version: "2-builder-alpine"
+caddy_container_localhost_version: "{{ caddy_container_version }}-localhost"
+caddy_container_build_plugins:
+  - "github.com/caddy-dns/rfc2136"
+#   - "github.com/caddy-dns/rfc2136"
 # caddy_container_version: "latest"
+
+caddy_custom_build_required: false
 
 caddy_operations:
   - caddy_container_create
