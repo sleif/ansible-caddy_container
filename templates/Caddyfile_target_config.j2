@@ -14,10 +14,10 @@
 		key_name "{{ rfc2136_key.key_name }}"
 		key_alg "{{ rfc2136_key.key_alg }}"
 		key "{{ rfc2136_key.key }}"
-		server "{{ rfc2136_key.server }}:53"
+		server "{{ rfc2136_key.server }}"
 		}
 		# propagation_timeout 1m
-		resolvers {{ rfc2136_key.server }}
+		resolvers {{ rfc2136_key.resolvers }}
 		# propagation_delay 1m
 		dns_challenge_override_domain {{ rfc2136_key.dns_challenge_override_domain }}
 	}
