@@ -2,7 +2,7 @@
 {{ _address }}{% if not loop.last %},
 {% endif %}{% endfor %} {
 {# https://{{ caddy_config_name }}:{{ caddy_target_uri_port | d('443') }} { #}
-	# encode gzip
+
 	# import from global Caddyfile
 	import accesslog
 	{% for line in _caddy_global_config_lines.splitlines() %}
@@ -54,8 +54,8 @@
 	{% endfor %}
 	{% endif %}
 	{% if caddy_operation == 'caddy_file_server' %}
-	handle * {
-		header /* {
+	{# handle * { #}
+		header {
 			{% for line in _caddy_header_lines.splitlines() %}
 			{{ line }}
 			{% endfor %}
@@ -65,13 +65,15 @@
 			{# X-Xss-Protection "1; mode=block" always #}
 			{# X-Frame-Options "SAMEORIGIN" always #}
 		}
-		root * {{ caddy_file_server_root | d('/data/' ~ caddy_config_name ~'/') }}
-		file_server
-		{# {{ caddy_file_server_config_lines }} #}
 		{% for line in _caddy_file_server_config_lines.splitlines() %}
 		{{ line }}
 		{% endfor %}
-	}
+		{% if _caddy_file_server_config_lines is falsy %}
+		root * {{ caddy_file_server_root | d('/data/' ~ caddy_config_name ~'/') }}
+		file_server
+		{% endif %}
+	{# handle * { #}
+	{# } #}
 	{# tls {
 		protocols tls1.3
 		curves x25519

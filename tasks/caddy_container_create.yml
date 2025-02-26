@@ -96,10 +96,7 @@
       vars:
         caddy_operation: caddy_container_slurp_root_ca
         caddy_container_name: "{{ caddy_frontend_container_name }}"
-        # TODO: make the next two variable
-        podman_rootless: true
-        # podman_user: "podman"
-        # podman_group: "podman"
+        podman_rootless: false
         _caddy_reload_required: false
         _caddy_restart_required: false
 
