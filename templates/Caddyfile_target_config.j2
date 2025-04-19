@@ -32,12 +32,18 @@
 	import wellknown #}
 	{# handle * { #}
 	{% if caddy_operation == 'caddy_reverse_proxy' %}
-	reverse_proxy {{ caddy_reverse_proxy_upstream_protocol | d('') }}{{ caddy_reverse_proxy_upstream_host }}:{{ caddy_reverse_proxy_upstream_port | d ('443') }} {
+	{% if caddy_reverse_proxy_upstream_host is defined and caddy_reverse_proxy_upstream_host is truthy %}
+	reverse_proxy {{ caddy_reverse_proxy_upstream_protocol | d('') }}{{ caddy_reverse_proxy_upstream_host }}:{{ caddy_reverse_proxy_upstream_port | d ('443') }}
+	{% if _caddy_reverse_proxy_config_lines is truthy %}
+	{
 		# caddy_reverse_proxy_config_lines:
 		{% for line in _caddy_reverse_proxy_config_lines.splitlines() %}
 		{{ line }}
 		{% endfor %}
 	}
+	{% endif %}
+	{% endif %}
+	{% if _caddy_header_lines is truthy %}
 	header /* {
 		# header lines comming from caddy_header_lines
 		{% for line in _caddy_header_lines.splitlines() %}
@@ -49,9 +55,7 @@
 		{# X-Xss-Protection "1; mode=block" always #}
 		{# X-Frame-Options "SAMEORIGIN" always #}
 	}
-	{% for line in caddy_proxy_config_lines | d([]) %}
-	{{ line }}
-	{% endfor %}
+	{% endif %}
 	{% endif %}
 	{% if caddy_operation == 'caddy_file_server' %}
 	{# handle * { #}
