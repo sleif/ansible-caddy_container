@@ -1,0 +1,22 @@
+---
+
+caddy_container_name: "caddy"
+caddy_published: true
+podman_network_name: "podman"
+podman_rootless: true
+caddy_acme_staging: false
+caddy_acme_challenge: ''
+caddy_internal_acme_server_fqdn: "{{ caddy_container_name }}.dns.podman"
+
+caddy_file_server_with_imprint: false
+caddy_imprint:
+  h1: "Imprint"
+  h2: "Contact:"
+  legal_address: |
+    John Smith<BR>
+    123 Main Street<BR>
+    Anytown, USA<BR>
+    Postal Code: 12345S
+  contact: |
+    Phone: +123456789<BR>
+    E-Mail: john.smith@example.com
