@@ -3,6 +3,7 @@
 caddy_container_name: "caddy"
 caddy_published: true
 podman_network_name: "podman"
+podman_user: "podman"
 podman_rootless: true
 caddy_acme_staging: false
 caddy_acme_challenge: ''

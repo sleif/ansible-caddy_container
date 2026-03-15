@@ -21,7 +21,7 @@
       ansible.builtin.set_fact:
         _caddy_reload_required: "{{ true if _caddy_reload_required | d(false) | bool or _result.changed | bool else false }}"
 
-    - name: Caddy setup proxy from template for server {{ caddy_reverse_proxy_upstream_host }}
+    - name: Caddy setup proxy from template for {{ caddy_config_name }}
       ansible.builtin.template:
         src: "Caddyfile_target_config.j2"
         dest: "{{ _caddy_config_dir }}/{{ caddy_config_name }}.caddy"
