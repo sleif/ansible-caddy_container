@@ -1,2 +1,3 @@
+.ansible/
 .vscode/
 tasks/test.json
