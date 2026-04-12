@@ -33,9 +33,8 @@
 	{# handle * { #}
 	{% if caddy_operation == 'caddy_reverse_proxy' %}
 	{% if caddy_reverse_proxy_upstream_host is defined and caddy_reverse_proxy_upstream_host is truthy %}
-	reverse_proxy {{ caddy_reverse_proxy_upstream_protocol | d('') }}{{ caddy_reverse_proxy_upstream_host }}:{{ caddy_reverse_proxy_upstream_port | d ('443') }}
-	{% if _caddy_reverse_proxy_config_lines is truthy %}
-	{
+	reverse_proxy {{ caddy_reverse_proxy_upstream_protocol | d('') }}{{ caddy_reverse_proxy_upstream_host }}:{{
+		caddy_reverse_proxy_upstream_port | d ('443') }}{% if _caddy_reverse_proxy_config_lines is truthy %} {
 		# caddy_reverse_proxy_config_lines:
 		{% for line in _caddy_reverse_proxy_config_lines.splitlines() %}
 		{{ line }}
@@ -84,4 +83,5 @@
 	}
 	encode zstd gzip #}
 	{% endif %}
+
 }
