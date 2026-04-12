@@ -135,6 +135,7 @@
     _build_images:
       - name: "{{ caddy_container_image }}"
         tag: "{{ caddy_container_build_version }}"
+        tags_to_remove: "{{ caddy_container_build_versions_to_remove | d([]) }}"
   when:
     - caddy_custom_build_required
 
@@ -156,6 +157,7 @@
       image:
         name: "{{ caddy_container_image }}"
         tag: "{{ caddy_container_version }}"
+        tags_to_remove: "{{ caddy_container_versions_to_remove }}"
       build_required: "{{ caddy_custom_build_required }}"
       additional_images: "{{ _build_images | default([]) }}"
       containerfile_content: |-
