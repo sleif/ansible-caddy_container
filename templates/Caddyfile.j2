@@ -20,6 +20,7 @@
 	}
 	servers {
 		metrics
+		# protocols h1
 		{% if caddy_trusted_proxies | d([]) is truthy %}		trusted_proxies static{% for _trusted_proxy in caddy_trusted_proxies %} {{ _trusted_proxy }}{% endfor +%}
 		{% endif %}
 	}
