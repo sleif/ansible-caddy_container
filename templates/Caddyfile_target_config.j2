@@ -31,6 +31,10 @@
 	{# import errorhandling
 	import wellknown #}
 	{# handle * { #}
+	{% if caddy_handle_allowed_clients is defined and caddy_handle_allowed_clients is truthy %}
+		@allowed_clients remote_ip {{ caddy_handle_allowed_clients | join(' ') }}
+		handle @allowed_clients {
+	{% endif %}
 	{% if caddy_operation == 'caddy_reverse_proxy' %}
 	{% if caddy_reverse_proxy_upstream_host is defined and caddy_reverse_proxy_upstream_host is truthy %}
 	reverse_proxy {{ caddy_reverse_proxy_upstream_protocol | d('') }}{{ caddy_reverse_proxy_upstream_host }}:{{
@@ -44,7 +48,7 @@
 	{% endif %}
 	{% if _caddy_header_lines is truthy %}
 	header /* {
-		# header lines comming from caddy_header_lines
+		# header lines coming from caddy_header_lines
 		{% for line in _caddy_header_lines.splitlines() %}
 		{{ line }}
 		{% endfor %}
@@ -83,5 +87,11 @@
 	}
 	encode zstd gzip #}
 	{% endif %}
+	{% if caddy_handle_allowed_clients is defined and caddy_handle_allowed_clients is truthy %}
 
+	}
+	handle {
+		respond "Forbidden" 403
+	}
+	{% endif %}
 }
